@@ -30,20 +30,22 @@ async def get_tasks(message: types.Message):
     tasks = await service.read_tasks(int(message.from_user.id))
     if tasks:
         for item in tasks:
-            await message.answer("Описание задачи: {body}".format(body=item.body))
+            await message.answer(
+                "Название задачи - {title}\n Описание задачи: {body}".format(title=item.title, body=item.body))
     else:
         await message.answer("Список задач пуст")
 
 
 @dp.message(Command('add'))
 async def start_add_task(message: types.Message, state: FSMContext):
+    """Начало FSM для добавления задачи"""
     await message.answer("Введите название задачи")
     await state.set_state(StateTask.title)
 
 
 @dp.message(StateTask.title)
 async def get_title(message: types.Message, state: FSMContext):
-    await message.answer(f"Ваше название {message.text}")
+    """Добавление title"""
     await state.update_data(title=message.text)
     await state.set_state(StateTask.description)
     await message.answer("Введите описание задачи")
@@ -51,6 +53,7 @@ async def get_title(message: types.Message, state: FSMContext):
 
 @dp.message(StateTask.description)
 async def get_description(message: types.Message, state: FSMContext):
+    """Добавление description и запись в БД с очищением FSM"""
     await state.update_data(description=message.text)
     data = await state.get_data()
     await service.add_task(user_id=int(message.from_user.id), title=data['title'], body=data['description'])
